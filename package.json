@@ -1,6 +1,10 @@
 {
   "name": "@sharif-stellar-tools/sharif-chain-scope",
   "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sharif-stellar-tools/sharif-chain-scope.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
