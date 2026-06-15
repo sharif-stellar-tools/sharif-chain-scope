@@ -1,5 +1,5 @@
 {
-  "name": "sharif-chain-scope",
+  "name": "sharif-stellar-tools/sharif-chain-scope",
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
