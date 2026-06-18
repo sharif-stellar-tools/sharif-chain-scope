@@ -1,32 +1,40 @@
 {
-    "name":  "sharif-chain-scope",
-    "version":  "1.0.0",
-    "scripts":  {
-                    "dev":  "vite",
-                    "build":  "tsc \u0026\u0026 vite build",
-                    "preview":  "vite preview"
-                },
-    "dependencies":  {
-                         "react":  "^18.2.0",
-                         "react-dom":  "^18.2.0",
-                         "recharts":  "^2.5.0"
-                     },
-    "devDependencies":  {
-                            "@types/react":  "^18.0.28",
-                            "@types/react-dom":  "^18.0.11",
-                            "@vitejs/plugin-react":  "^3.1.0",
-                            "autoprefixer":  "^10.4.14",
-                            "postcss":  "^8.4.21",
-                            "tailwindcss":  "^3.3.0",
-                            "typescript":  "^5.0.2",
-                            "vite":  "^4.2.0"
-                        },
-    "engines":  {
-                    "node":  ">=24 <25"
-                },
-    "private":  true,
-    "repository":  {
-                       "type":  "git",
-                       "url":  "git+https://github.com/sharif-stellar-tools/sharif-chain-scope.git"
-                   }
+    "name": "sharif-chain-scope",
+    "version": "1.0.0",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage"
+    },
+    "dependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-query": "^3.39.3",
+        "recharts": "^2.5.0"
+    },
+    "devDependencies": {
+        "@types/jest": "^30.0.0",
+        "@types/react": "^18.0.28",
+        "@types/react-dom": "^18.0.11",
+        "@vitejs/plugin-react": "^3.1.0",
+        "autoprefixer": "^10.4.14",
+        "jest": "^30.4.2",
+        "nock": "^14.0.15",
+        "postcss": "^8.4.21",
+        "tailwindcss": "^3.3.0",
+        "ts-jest": "^29.4.11",
+        "typescript": "^5.0.2",
+        "vite": "^4.2.0"
+    },
+    "engines": {
+        "node": ">=20 <21"
+    },
+    "private": true,
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/sharif-stellar-tools/sharif-chain-scope.git"
+    }
 }
