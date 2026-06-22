@@ -1,9 +1,39 @@
 import React, { useState } from 'react';
-import { useTransactionHistory } from '../hooks/useTransactionHistory';
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { Transaction, useTransactionHistory } from '../hooks/useTransactionHistory';
+
+interface ChartPoint {
+  timestamp: string;
+  amount: number;
+}
+
+const formatTimestamp = (timestamp: string) => {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestamp));
+};
+
+const getTransactionChartData = (transactions: Transaction[] = []): ChartPoint[] => {
+  return transactions.map((transaction) => ({
+    timestamp: formatTimestamp(transaction.timestamp),
+    amount: transaction.amount,
+  }));
+};
 
 export const Dashboard: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>('');
   const { data, isLoading, isError } = useTransactionHistory('0x123', selectedType || undefined);
+  const chartData = getTransactionChartData(data);
 
   // Modern styling object
   const styles = {
@@ -59,9 +89,22 @@ export const Dashboard: React.FC = () => {
     },
     metrics: {
       fontSize: '0.875rem',
-      color: '#64748b', // Slate 500
+      color: '#64748b',
       marginBottom: '1rem',
       fontWeight: 500,
+    },
+    chartCard: {
+      height: 'clamp(260px, 35vw, 320px)',
+      marginBottom: '1.5rem',
+      padding: '1rem',
+      backgroundColor: '#1e293b',
+      borderRadius: '12px',
+      border: '1px solid #334155',
+    },
+    chartEmpty: {
+      color: '#64748b',
+      textAlign: 'center' as const,
+      padding: '2rem 1rem',
     },
     tableContainer: {
       overflowX: 'auto' as const,
@@ -155,6 +198,52 @@ export const Dashboard: React.FC = () => {
       ) : (
         <div>
           <div style={styles.metrics}>{data?.length} transactions found.</div>
+          <div style={styles.chartCard}>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="transactionVolume" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="timestamp"
+                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                    axisLine={{ stroke: '#334155' }}
+                    tickLine={{ stroke: '#334155' }}
+                    minTickGap={32}
+                  />
+                  <YAxis
+                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                    axisLine={{ stroke: '#334155' }}
+                    tickLine={{ stroke: '#334155' }}
+                    tickFormatter={(value) => `${value} XLM`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '8px',
+                      color: '#f8fafc',
+                    }}
+                    labelStyle={{ color: '#cbd5e1' }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#38bdf8"
+                    strokeWidth={3}
+                    fill="url(#transactionVolume)"
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={styles.chartEmpty}>No transaction volume data available.</div>
+            )}
+          </div>
           <div style={styles.tableContainer}>
             <table style={styles.table}>
               <thead>
