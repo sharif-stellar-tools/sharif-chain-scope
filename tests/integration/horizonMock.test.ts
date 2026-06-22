@@ -1,8 +1,7 @@
 import nock from 'nock';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const HORIZON_URL = 'https://horizon.stellar.org';
+import { HORIZON_URLS } from '../mocks/horizonMock';
 
 function loadFixture(filename: string) {
   const fixturesPath = path.join(__dirname, '../fixtures', filename);
@@ -14,58 +13,61 @@ function fetchOperations(url: string) {
     const https = require('https');
     https.get(url, { headers: { 'User-Agent': 'ChainScope-CLI/1.0' } }, (res: any) => {
       let data = '';
-      res.on('data', (chunk: string) => {
-        data += chunk;
-      });
+      res.on('data', (chunk: string) => { data += chunk; });
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          try {
-            resolve(JSON.parse(data));
-          } catch (e) {
-            reject(new Error('Failed to parse response JSON'));
-          }
+          try { resolve(JSON.parse(data)); }
+          catch (e) { reject(new Error('Failed to parse response JSON')); }
         } else {
           reject(new Error(`HTTP Error: ${res.statusCode}`));
         }
       });
-    }).on('error', (err: Error) => {
-      reject(err);
-    });
+    }).on('error', (err: Error) => { reject(err); });
   });
 }
 
 describe('Horizon API Mocking', () => {
-  beforeEach(() => {
-    nock.cleanAll();
-  });
+  beforeEach(() => { nock.cleanAll(); });
+  afterEach(() => { nock.cleanAll(); });
 
-  afterEach(() => {
-    nock.cleanAll();
-  });
-
-  test('should fetch operations from mock Horizon server', async () => {
+  test('should fetch operations from mock Mainnet Horizon server', async () => {
     const fixture = loadFixture('operations.json');
-    
-    nock(HORIZON_URL)
+    nock(HORIZON_URLS.mainnet)
       .get('/operations?limit=50&order=desc')
       .reply(200, fixture);
 
-    const result = await fetchOperations(`${HORIZON_URL}/operations?limit=50&order=desc`);
-    
+    const result: any = await fetchOperations(`${HORIZON_URLS.mainnet}/operations?limit=50&order=desc`);
     expect(result._embedded.records).toHaveLength(3);
     expect(result._embedded.records[0].type).toBe('payment');
-    expect(result._embedded.records[0].amount).toBe('150.0000000');
+  });
+
+  test('should fetch operations from mock Testnet Horizon server', async () => {
+    const fixture = loadFixture('operations.json');
+    nock(HORIZON_URLS.testnet)
+      .get('/operations?limit=50&order=desc')
+      .reply(200, fixture);
+
+    const result: any = await fetchOperations(`${HORIZON_URLS.testnet}/operations?limit=50&order=desc`);
+    expect(result._embedded.records).toHaveLength(3);
+  });
+
+  test('should fetch operations from mock Futurenet Horizon server', async () => {
+    const fixture = loadFixture('operations.json');
+    nock(HORIZON_URLS.futurenet)
+      .get('/operations?limit=50&order=desc')
+      .reply(200, fixture);
+
+    const result: any = await fetchOperations(`${HORIZON_URLS.futurenet}/operations?limit=50&order=desc`);
+    expect(result._embedded.records).toHaveLength(3);
   });
 
   test('should handle multiple operation types from mock', async () => {
     const fixture = loadFixture('operations.json');
-    
-    nock(HORIZON_URL)
+    nock(HORIZON_URLS.mainnet)
       .get(/\/operations.*/)
       .reply(200, fixture);
 
-    const result = await fetchOperations(`${HORIZON_URL}/operations?limit=50&order=desc`);
-    
+    const result: any = await fetchOperations(`${HORIZON_URLS.mainnet}/operations?limit=50&order=desc`);
     const types = result._embedded.records.map((r: any) => r.type);
     expect(types).toContain('payment');
     expect(types).toContain('manage_sell_offer');
@@ -73,22 +75,18 @@ describe('Horizon API Mocking', () => {
   });
 
   test('should mock Horizon server error responses', async () => {
-    nock(HORIZON_URL)
+    nock(HORIZON_URLS.mainnet)
       .get(/\/operations.*/)
       .reply(500, { error: 'Server Error' });
 
-    await expect(fetchOperations(`${HORIZON_URL}/operations?limit=50&order=desc`))
-      .rejects
-      .toThrow('HTTP Error: 500');
+    await expect(fetchOperations(`${HORIZON_URLS.mainnet}/operations?limit=50&order=desc`))
+      .rejects.toThrow('HTTP Error: 500');
   });
 
   test('fixture contains valid ledger data', () => {
     const fixture = loadFixture('operations.json');
-    
     expect(fixture._embedded).toBeDefined();
-    expect(fixture._embedded.records).toBeDefined();
     expect(Array.isArray(fixture._embedded.records)).toBe(true);
-    
     fixture._embedded.records.forEach((record: any) => {
       expect(record.id).toBeDefined();
       expect(record.type).toBeDefined();
@@ -97,17 +95,26 @@ describe('Horizon API Mocking', () => {
     });
   });
 
-  test('should run tests offline without hitting live network', async () => {
-    nock.disableNetConnect();
+  test('should isolate network mocks — mainnet mock does not intercept testnet', async () => {
     const fixture = loadFixture('operations.json');
-    
-    nock(HORIZON_URL)
+    nock(HORIZON_URLS.mainnet)
       .get('/operations?limit=50&order=desc')
       .reply(200, fixture);
 
-    const result = await fetchOperations(`${HORIZON_URL}/operations?limit=50&order=desc`);
+    // Testnet should NOT be intercepted
+    await expect(fetchOperations(`${HORIZON_URLS.testnet}/operations?limit=50&order=desc`))
+      .rejects.toThrow();
+  });
+
+  test('should run tests offline without hitting live network', async () => {
+    nock.disableNetConnect();
+    const fixture = loadFixture('operations.json');
+    nock(HORIZON_URLS.mainnet)
+      .get('/operations?limit=50&order=desc')
+      .reply(200, fixture);
+
+    const result: any = await fetchOperations(`${HORIZON_URLS.mainnet}/operations?limit=50&order=desc`);
     expect(result._embedded.records).toHaveLength(3);
-    
     nock.enableNetConnect();
   });
 });

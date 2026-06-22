@@ -30,7 +30,7 @@
         "vite": "^4.2.0"
     },
     "engines": {
-        "node": ">=20 <21"
+        "node": ">=20"
     },
     "private": true,
     "repository": {
