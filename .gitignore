@@ -1,4 +1,5 @@
 .github/prompts/
 .kilo/
-node_modules/.vite/
-node_modules/esbuild/lib/downloaded-@esbuild-win32-x64-esbuild.exe
+node_modules/
+dist/
+.env
