@@ -8,6 +8,9 @@ import {
   YAxis,
 } from 'recharts';
 import { Transaction, useTransactionHistory } from '../hooks/useTransactionHistory';
+import { useLedgerStream } from '../hooks/useLedgerStream';
+
+const WS_URL: string | null = (import.meta as unknown as { env: Record<string, string> }).env.VITE_LEDGER_WS_URL ?? null;
 
 interface ChartPoint {
   timestamp: string;
@@ -34,6 +37,8 @@ export const Dashboard: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>('');
   const { data, isLoading, isError } = useTransactionHistory('0x123', selectedType || undefined);
   const chartData = getTransactionChartData(data);
+
+  const { transactions: liveTransactions, status: streamStatus } = useLedgerStream(WS_URL);
 
   // Modern styling object
   const styles = {
@@ -280,6 +285,48 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── Live Ledger Stream ───────────────────────────────────── */}
+      <div style={{ marginTop: '2rem' }}>
+        <h3 style={{ ...styles.header, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+          Live Ledger Stream{' '}
+          <span style={{
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            color: streamStatus === 'open' ? '#10b981' : streamStatus === 'error' ? '#ef4444' : '#94a3b8',
+          }}>
+            ● {streamStatus}
+          </span>
+        </h3>
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Transaction ID</th>
+                <th style={styles.th}>Type</th>
+                <th style={styles.th}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {liveTransactions.length > 0 ? (
+                liveTransactions.map((tx) => (
+                  <tr key={tx.id}>
+                    <td style={styles.td}><span style={styles.txId}>{tx.id}</span></td>
+                    <td style={styles.td}><span style={styles.badge(tx.type)}>{tx.type.replace(/_/g, ' ')}</span></td>
+                    <td style={styles.td}><span style={styles.amount}>{tx.amount} XLM</span></td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={3} style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '2rem' }}>
+                    {streamStatus === 'connecting' ? 'Connecting to stream…' : 'Waiting for live events…'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
