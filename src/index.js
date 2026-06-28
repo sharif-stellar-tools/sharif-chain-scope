@@ -75,12 +75,14 @@ function pad(str, length) {
 // ─── Mock data (offline fallback) ────────────────────────────────────────────
 
 const mockOperations = [
-  { id: 'op_1', type: 'payment',                  source_account: 'GD23...3456', details: { amount: '150.0000000', asset_code: 'XLM' },  created_at: '2026-06-17T00:00:00Z' },
-  { id: 'op_2', type: 'manage_sell_offer',         source_account: 'GB7A...8901', details: { amount: '320.5000000', price: '0.12' },        created_at: '2026-06-17T00:05:00Z' },
-  { id: 'op_3', type: 'create_passive_sell_offer', source_account: 'GC12...4567', details: { amount: '45.0000000',  price: '1.25' },         created_at: '2026-06-17T00:10:00Z' },
-  { id: 'op_4', type: 'payment',                  source_account: 'GA45...9012', details: { amount: '500.0000000', asset_code: 'USDC' }, created_at: '2026-06-17T00:15:00Z' },
-  { id: 'op_5', type: 'payment',                  source_account: 'GD23...3456', details: { amount: '12.5000000',  asset_code: 'XLM' },  created_at: '2026-06-17T00:20:00Z' },
-  { id: 'op_6', type: 'manage_sell_offer',         source_account: 'GB7A...8901', details: { amount: '80.0000000',  price: '0.15' },        created_at: '2026-06-17T00:25:00Z' },
+  { id: 'op_1', type: 'payment',                  source_account: 'GD23...3456', details: { amount: '150.0000000', asset_code: 'XLM' },  memo: 'Payment for services',     created_at: '2026-06-17T00:00:00Z' },
+  { id: 'op_2', type: 'manage_sell_offer',         source_account: 'GB7A...8901', details: { amount: '320.5000000', price: '0.12' },        memo: 'Sell order',               created_at: '2026-06-17T00:05:00Z' },
+  { id: 'op_3', type: 'create_passive_sell_offer', source_account: 'GC12...4567', details: { amount: '45.0000000',  price: '1.25' },         memo: 'Passive offer',            created_at: '2026-06-17T00:10:00Z' },
+  { id: 'op_4', type: 'payment',                  source_account: 'GA45...9012', details: { amount: '500.0000000', asset_code: 'USDC' }, memo: 'Subscription payment',     created_at: '2026-06-17T00:15:00Z' },
+  { id: 'op_5', type: 'payment',                  source_account: 'GD23...3456', details: { amount: '12.5000000',  asset_code: 'XLM' },  memo: 'Refund',                   created_at: '2026-06-17T00:20:00Z' },
+  { id: 'op_6', type: 'manage_sell_offer',         source_account: 'GB7A...8901', details: { amount: '80.0000000',  price: '0.15' },        memo: 'Large sell order',         created_at: '2026-06-17T00:25:00Z' },
+  { id: 'op_7', type: 'payment',                  source_account: 'GC12...4567', details: { amount: '75.0000000',  asset_code: 'XLM' },  memo: 'Daily payout',             created_at: '2026-06-18T00:00:00Z' },
+  { id: 'op_8', type: 'manage_buy_offer',          source_account: 'GA45...9012', details: { amount: '320.0000000', price: '1.00' },        memo: 'Buy order',                created_at: '2026-06-18T00:05:00Z' },
 ];
 
 // ─── Help ─────────────────────────────────────────────────────────────────────
@@ -103,12 +105,21 @@ function printHelp() {
   \x1b[1mOptions:\x1b[0m
     --network <name>          Network to connect to: mainnet | testnet | futurenet  (default: mainnet)
     --operation-type <type>   Filter operations by type (e.g. payment, manage_sell_offer)
+    --asset <code>            Filter by asset code (e.g. XLM, USDC)
+    --amount-min <n>          Minimum amount filter
+    --amount-max <n>          Maximum amount filter
+    --memo <text>             Search memo text (fuzzy match)
+    --date-from <date>        Filter by start date (ISO 8601)
+    --date-to <date>          Filter by end date (ISO 8601)
+    --query <text>            Search across ID, type, memo, and source account
     --watch                   Stay open; press [n] to cycle networks, [q] to quit
     --help, -h                Show this help message
 
   \x1b[1mExamples:\x1b[0m
     node src/index.js --network testnet
     node src/index.js --network futurenet --operation-type payment
+    node src/index.js --asset USDC --amount-min 100 --amount-max 500
+    node src/index.js --memo "payment" --date-from 2026-06-18
     node src/index.js --watch
   `);
 }
@@ -120,9 +131,45 @@ function printNetworkBanner(networkKey) {
   console.log(`\n${net.bgLabel} ● ${net.label.toUpperCase()} \x1b[0m  ${net.color}${net.passphrase}\x1b[0m`);
 }
 
+// ─── Advanced filtering helpers ───────────────────────────────────────────────
+
+function applyAdvancedFilters(operations, filters) {
+  if (!filters || Object.keys(filters).length === 0) return operations;
+
+  return operations.filter((op) => {
+    if (filters.operationType && op.type !== filters.operationType) return false;
+
+    const amount = op.details ? parseFloat(op.details.amount) : NaN;
+
+    if (filters.asset) {
+      const asset = (op.details && op.details.asset_code) || 'XLM';
+      if (asset.toUpperCase() !== filters.asset.toUpperCase()) return false;
+    }
+
+    if (filters.amountMin !== undefined && (isNaN(amount) || amount < filters.amountMin)) return false;
+    if (filters.amountMax !== undefined && (isNaN(amount) || amount > filters.amountMax)) return false;
+
+    if (filters.memo) {
+      const memo = (op.memo || '').toLowerCase();
+      if (!memo.includes(filters.memo.toLowerCase())) return false;
+    }
+
+    if (filters.dateFrom && op.created_at < filters.dateFrom) return false;
+    if (filters.dateTo && op.created_at > filters.dateTo) return false;
+
+    if (filters.query) {
+      const q = filters.query.toLowerCase();
+      const haystack = [op.id, op.type, op.memo || '', op.source_account || ''].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+
+    return true;
+  });
+}
+
 // ─── Core fetch + display ─────────────────────────────────────────────────────
 
-async function fetchAndDisplay(networkKey, operationType) {
+async function fetchAndDisplay(networkKey, filters) {
   const net = NETWORKS[networkKey];
 
   printNetworkBanner(networkKey);
@@ -154,9 +201,12 @@ async function fetchAndDisplay(networkKey, operationType) {
     operations = mockOperations;
   }
 
-  if (operationType) {
-    console.log('\x1b[34m%s\x1b[0m', `Filtering operations of type: "${operationType}"`);
-    operations = operations.filter((op) => op.type === operationType);
+  if (filters && Object.keys(filters).length > 0) {
+    const filterDesc = Object.entries(filters)
+      .map(([k, v]) => `${k}: "${v}"`)
+      .join(', ');
+    console.log('\x1b[34m%s\x1b[0m', `Applying filters: ${filterDesc}`);
+    operations = applyAdvancedFilters(operations, filters);
   }
 
   console.log(`\n\x1b[1m${'-'.repeat(89)}\x1b[0m`);
@@ -201,20 +251,36 @@ async function main() {
     if (netArg) networkKey = resolveNetwork(netArg.split('=')[1]);
   }
 
-  // Parse --operation-type
-  let operationType = null;
-  const typeIdx = args.indexOf('--operation-type');
-  if (typeIdx !== -1 && typeIdx + 1 < args.length) {
-    operationType = args[typeIdx + 1];
-  } else {
-    const typeArg = args.find((a) => a.startsWith('--operation-type='));
-    if (typeArg) operationType = typeArg.split('=')[1];
+  // Parse advanced filters
+  function parseArg(short, long) {
+    const idx = args.indexOf(long);
+    if (idx !== -1 && idx + 1 < args.length) return args[idx + 1];
+    const eqArg = args.find((a) => a.startsWith(`${long}=`));
+    if (eqArg) return eqArg.split('=')[1];
+    return undefined;
   }
 
-  // Parse --watch flag (TUI hotkey mode)
+  const filters = {};
+  const operationType = parseArg('-t', '--operation-type');
+  if (operationType) filters.operationType = operationType;
+  const asset = parseArg(null, '--asset');
+  if (asset) filters.asset = asset;
+  const amountMin = parseArg(null, '--amount-min');
+  if (amountMin !== undefined) filters.amountMin = parseFloat(amountMin);
+  const amountMax = parseArg(null, '--amount-max');
+  if (amountMax !== undefined) filters.amountMax = parseFloat(amountMax);
+  const memo = parseArg(null, '--memo');
+  if (memo) filters.memo = memo;
+  const dateFrom = parseArg(null, '--date-from');
+  if (dateFrom) filters.dateFrom = dateFrom;
+  const dateTo = parseArg(null, '--date-to');
+  if (dateTo) filters.dateTo = dateTo;
+  const query = parseArg(null, '--query');
+  if (query) filters.query = query;
+
   const watchMode = args.includes('--watch');
 
-  await fetchAndDisplay(networkKey, operationType);
+  await fetchAndDisplay(networkKey, Object.keys(filters).length > 0 ? filters : null);
 
   if (watchMode) {
     console.log('\x1b[90mPress \x1b[1m[n]\x1b[0m\x1b[90m to cycle networks  |  \x1b[1m[q]\x1b[0m\x1b[90m to quit\x1b[0m\n');
@@ -231,7 +297,7 @@ async function main() {
         const idx = NETWORK_ORDER.indexOf(networkKey);
         networkKey = NETWORK_ORDER[(idx + 1) % NETWORK_ORDER.length];
         console.clear();
-        await fetchAndDisplay(networkKey, operationType);
+        await fetchAndDisplay(networkKey, Object.keys(filters).length > 0 ? filters : null);
         console.log('\x1b[90mPress \x1b[1m[n]\x1b[0m\x1b[90m to cycle networks  |  \x1b[1m[q]\x1b[0m\x1b[90m to quit\x1b[0m\n');
       }
     });

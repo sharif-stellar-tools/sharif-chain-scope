@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Transaction } from './useTransactionHistory';
+import { Transaction } from '../filters/types';
 
 export type StreamStatus = 'connecting' | 'open' | 'closed' | 'error';
 

@@ -7,7 +7,7 @@
  * directly — no jsdom required.
  */
 
-import { Transaction } from '../../src/hooks/useTransactionHistory';
+import { Transaction } from '../../src/filters/types';
 import { StreamStatus } from '../../src/hooks/useLedgerStream';
 
 // ── Minimal WebSocket mock ──────────────────────────────────────────────────
