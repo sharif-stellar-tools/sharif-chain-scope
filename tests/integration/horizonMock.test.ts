@@ -96,14 +96,20 @@ describe('Horizon API Mocking', () => {
   });
 
   test('should isolate network mocks — mainnet mock does not intercept testnet', async () => {
+    // Disable real network so un-mocked requests throw rather than hit live hosts.
+    nock.disableNetConnect();
+
     const fixture = loadFixture('operations.json');
     nock(HORIZON_URLS.mainnet)
       .get('/operations?limit=50&order=desc')
       .reply(200, fixture);
 
-    // Testnet should NOT be intercepted
+    // Testnet is NOT mocked, so the request must be rejected.
     await expect(fetchOperations(`${HORIZON_URLS.testnet}/operations?limit=50&order=desc`))
       .rejects.toThrow();
+
+    // Re-enable so subsequent tests (and the afterEach) are not affected.
+    nock.enableNetConnect();
   });
 
   test('should run tests offline without hitting live network', async () => {
