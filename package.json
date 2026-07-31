@@ -10,9 +10,9 @@
         "test:coverage": "jest --coverage"
     },
     "dependencies": {
+        "@tanstack/react-query": "^5.101.4",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "react-query": "^3.39.3",
         "recharts": "^2.5.0"
     },
     "devDependencies": {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Transaction, TransactionFilters } from '../filters/types';
 import { buildIndex, applyFilters } from '../filters/transactionFilterEngine';
 
@@ -26,8 +26,11 @@ export function useTransactionHistory(
 ) {
   const queryKey = ['history', address, filters];
 
-  const { data, isLoading, isError } = useQuery(queryKey, async () => {
-    return MOCK_TRANSACTIONS;
+  const { data, isLoading, isError } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      return MOCK_TRANSACTIONS;
+    },
   });
 
   const filteredData = useMemo(() => {
