@@ -125,7 +125,7 @@ export function parseSseLine(line: string): Record<string, unknown> | null {
  * @internal exported for unit testing only
  */
 export function handleSseResponse(
-  res: { statusCode?: number; setEncoding?: (enc: string) => void; resume?: () => void; on(event: string, cb: (...args: any[]) => void): void },
+  res: { statusCode?: number; setEncoding?: (enc: any) => void; resume?: () => void; on(event: string, cb: (...args: any[]) => void): void },
   url: string,
   onEvent: (record: Record<string, unknown>) => void,
   onClose: (err?: Error) => void,
